@@ -195,7 +195,7 @@ div.stDownloadButton > button:hover {
 # ==========================================
 # No empty HTML wrapper - fixes blank box.
 
-st.image(LOGO_URL, width=200)
+st.image(LOGO_URL, width=300)
 
 st.title("🚘 Auction PDF Extractor")
 
