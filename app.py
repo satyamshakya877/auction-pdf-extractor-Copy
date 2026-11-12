@@ -16,11 +16,12 @@ st.set_page_config(
 LOGO_URL = "https://www.bizupon.com/images/logo.png"
 
 # ==========================================
-# WHITE + GREEN + BLACK THEME
+# WHITE + GREEN + BLACK DESIGN
 # ==========================================
 st.markdown("""
 <style>
-/* Main background */
+
+/* Main page */
 .stApp,
 [data-testid="stAppViewContainer"],
 [data-testid="stHeader"] {
@@ -29,58 +30,45 @@ st.markdown("""
 }
 
 .block-container {
-    max-width: 1200px;
+    max-width: 1180px;
     padding-top: 2rem;
     padding-bottom: 3rem;
 }
 
-/* General typography */
-h1, h2, h3, h4, p, label {
-    color: #171717;
+/* Headings */
+h1, h2, h3 {
+    color: #171717 !important;
+    font-weight: 750;
 }
 
 h1 {
-    font-weight: 800;
-    letter-spacing: -0.04em;
+    letter-spacing: -0.035em;
 }
 
-[data-testid="stCaptionContainer"],
+/* Brand divider */
+.brand-line {
+    height: 4px;
+    background: linear-gradient(
+        90deg, #23932c, #8fda76, #ffffff
+    );
+    border-radius: 4px;
+    margin: 20px 0 25px;
+}
+
+/* Normal text */
+.stApp p,
+.stApp label {
+    color: #222222;
+}
+
+/* Caption */
 [data-testid="stCaptionContainer"] p {
     color: #647064 !important;
 }
 
-/* Main brand header */
-.brand-header {
-    background: #ffffff;
-    border: 1px solid #e2e8e2;
-    border-radius: 16px;
-    padding: 22px 26px;
-    margin-bottom: 24px;
-}
-
-.brand-header h1 {
-    color: #141414 !important;
-    font-size: 30px;
-    margin: 15px 0 5px;
-}
-
-.brand-header p {
-    color: #647064 !important;
-    margin: 0;
-}
-
-.brand-line {
-    height: 4px;
-    background: linear-gradient(
-        90deg, #27a329, #71d94d, #ffffff
-    );
-    border-radius: 4px;
-    margin-top: 18px;
-}
-
-/* Metric cards */
+/* Statistics cards */
 [data-testid="stMetric"] {
-    background-color: #f2f9f0 !important;
+    background-color: #f0f8ee !important;
     border: 1px solid #d6e8d1 !important;
     border-radius: 14px !important;
     padding: 20px !important;
@@ -89,7 +77,7 @@ h1 {
 
 [data-testid="stMetricLabel"],
 [data-testid="stMetricLabel"] * {
-    color: #384638 !important;
+    color: #354535 !important;
     opacity: 1 !important;
     font-weight: 600 !important;
 }
@@ -102,61 +90,79 @@ h1 {
     font-weight: 800 !important;
 }
 
-/* File uploader */
+/* PDF uploader container */
 [data-testid="stFileUploader"] {
-    background-color: #f8fbf7 !important;
-    border: 1px solid #dce9d8 !important;
-    border-radius: 14px;
-    padding: 12px;
+    background: #f8fcf7 !important;
+    border: 1px solid #dcebd8 !important;
+    border-radius: 12px !important;
+    padding: 12px !important;
 }
 
-[data-testid="stFileUploader"] label,
-[data-testid="stFileUploader"] p,
-[data-testid="stFileUploader"] span,
-[data-testid="stFileUploader"] small {
-    color: #222222 !important;
-}
-
+/* Upload drop area */
 [data-testid="stFileUploaderDropzone"] {
     background-color: #ffffff !important;
-    border: 2px dashed #90c68a !important;
-    border-radius: 10px;
+    border: 2px dashed #8acb82 !important;
+    border-radius: 10px !important;
 }
 
+/* Upload text */
+[data-testid="stFileUploaderDropzone"] p,
+[data-testid="stFileUploaderDropzone"] span,
+[data-testid="stFileUploaderDropzone"] small,
+[data-testid="stFileUploaderDropzoneInstructions"] * {
+    color: #222222 !important;
+    opacity: 1 !important;
+}
+
+/* Upload button - green background + white text */
 [data-testid="stFileUploaderDropzone"] button {
+    background-color: #23932c !important;
+    border: 1px solid #23932c !important;
     color: #ffffff !important;
-    background-color: #202820 !important;
-    border: 1px solid #202820 !important;
+    border-radius: 8px !important;
+    opacity: 1 !important;
+}
+
+[data-testid="stFileUploaderDropzone"] button *,
+[data-testid="stFileUploaderDropzone"] button p,
+[data-testid="stFileUploaderDropzone"] button span {
+    color: #ffffff !important;
+    opacity: 1 !important;
+}
+
+[data-testid="stFileUploaderDropzone"] button:hover {
+    background-color: #176d20 !important;
+    border-color: #176d20 !important;
 }
 
 /* Download buttons */
 div.stDownloadButton > button {
     background-color: #23932c !important;
-    color: #ffffff !important;
     border: 1px solid #23932c !important;
     border-radius: 10px !important;
-    padding: 12px !important;
+    color: #ffffff !important;
     font-weight: 700 !important;
+    min-height: 48px;
+}
+
+div.stDownloadButton > button *,
+div.stDownloadButton > button p {
+    color: #ffffff !important;
 }
 
 div.stDownloadButton > button:hover {
     background-color: #176d20 !important;
     border-color: #176d20 !important;
-    color: #ffffff !important;
 }
 
-div.stDownloadButton > button p {
-    color: #ffffff !important;
-}
-
-/* Table */
+/* Dataframe */
 [data-testid="stDataFrame"] {
     border: 1px solid #e1e8e0;
     border-radius: 12px;
     overflow: hidden;
 }
 
-/* Info and warning messages */
+/* Alerts */
 [data-testid="stAlert"] {
     border-radius: 12px;
 }
@@ -172,37 +178,36 @@ div.stDownloadButton > button p {
     text-align: center;
     padding: 22px;
     border-top: 1px solid #e1e8e0;
-    margin-top: 32px;
+    margin-top: 35px;
     color: #647064;
     font-size: 13px;
 }
 
 .biz-footer strong {
-    color: #21852b;
+    color: #23932c;
 }
+
 </style>
 """, unsafe_allow_html=True)
 
 # ==========================================
-# BIZUPON LOGO + HEADER
+# BIZUPON BRAND HEADER
 # ==========================================
-st.markdown(
-    '<div class="brand-header">',
-    unsafe_allow_html=True
+# No empty HTML wrapper - fixes blank box.
+
+st.image(LOGO_URL, width=200)
+
+st.title("🚘 Auction PDF Extractor")
+
+st.caption(
+    "Extract Japanese Auction Raku POS bid prices, "
+    "lot numbers and auction remarks automatically."
 )
 
-st.image(LOGO_URL, width=220)
-
-st.markdown("""
-<h1>🚘 Auction PDF Extractor</h1>
-<p>
-Extract Japanese Auction Raku POS bid prices,
-lot numbers and auction remarks automatically.
-</p>
-<div class="brand-line"></div>
-""", unsafe_allow_html=True)
-
-st.markdown("</div>", unsafe_allow_html=True)
+st.markdown(
+    '<div class="brand-line"></div>',
+    unsafe_allow_html=True
+)
 
 # ==========================================
 # PDF UPLOAD
@@ -234,9 +239,7 @@ if files:
     with st.spinner(
         "Extracting lots and checking cancellations..."
     ):
-
         for f in files:
-
             try:
                 a, c, e = parse_pdf(
                     f.getvalue(),
@@ -260,10 +263,7 @@ if files:
     c1, c2, c3, c4 = st.columns(4)
 
     with c1:
-        st.metric(
-            "Active Lots",
-            len(active)
-        )
+        st.metric("Active Lots", len(active))
 
     with c2:
         st.metric(
@@ -290,7 +290,6 @@ if files:
     # WARNINGS
     # ======================================
     if issues:
-
         st.warning(
             "Some records may require manual review:"
         )
@@ -328,14 +327,13 @@ if files:
         )
 
         # ==================================
-        # DOWNLOAD BUTTONS
+        # DOWNLOAD
         # ==================================
         st.markdown("### Download Results")
 
         d1, d2 = st.columns(2)
 
         with d1:
-
             st.download_button(
                 "⬇ Download Excel (.xlsx)",
                 data=excel_bytes(df),
@@ -348,7 +346,6 @@ if files:
             )
 
         with d2:
-
             st.download_button(
                 "⬇ Download CSV",
                 data=csv_bytes(df),
@@ -358,7 +355,6 @@ if files:
             )
 
     else:
-
         st.error(
             "No active records found. "
             "The PDF may be scanned or use "
@@ -371,20 +367,16 @@ if files:
     with st.expander(
         f"View Cancelled Lots ({len(cancelled)})"
     ):
-
         if cancelled:
-
             st.dataframe(
                 pd.DataFrame(cancelled),
                 hide_index=True,
                 use_container_width=True
             )
-
         else:
             st.write("No cancelled lots found.")
 
 else:
-
     st.write(
         "Upload one or more PDF files to get started."
     )
@@ -395,9 +387,7 @@ else:
 st.markdown("""
 <div class="biz-footer">
     <strong>BIZUPON</strong> | Auction PDF Extractor
-    <p>
-        Japanese Auction Data Processing System
-    </p>
+    <p>Japanese Auction Data Processing System</p>
 </div>
 """, unsafe_allow_html=True)
 
