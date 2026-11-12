@@ -1,7 +1,9 @@
 
 import streamlit as st
 import pandas as pd
+
 from extractor import parse_pdf, excel_bytes, csv_bytes
+
 
 # ==========================================
 # PAGE CONFIGURATION
@@ -15,13 +17,14 @@ st.set_page_config(
 
 LOGO_URL = "https://www.bizupon.com/images/logo.png"
 
+
 # ==========================================
 # WHITE + GREEN + BLACK DESIGN
 # ==========================================
 st.markdown("""
 <style>
 
-/* Main page */
+/* Main page background */
 .stApp,
 [data-testid="stAppViewContainer"],
 [data-testid="stHeader"] {
@@ -29,6 +32,7 @@ st.markdown("""
     color: #171717 !important;
 }
 
+/* Main container */
 .block-container {
     max-width: 1180px;
     padding-top: 2rem;
@@ -38,21 +42,11 @@ st.markdown("""
 /* Headings */
 h1, h2, h3 {
     color: #171717 !important;
-    font-weight: 750;
+    font-weight: 750 !important;
 }
 
 h1 {
     letter-spacing: -0.035em;
-}
-
-/* Brand divider */
-.brand-line {
-    height: 4px;
-    background: linear-gradient(
-        90deg, #23932c, #8fda76, #ffffff
-    );
-    border-radius: 4px;
-    margin: 20px 0 25px;
 }
 
 /* Normal text */
@@ -61,12 +55,47 @@ h1 {
     color: #222222;
 }
 
-/* Caption */
+/* Captions */
 [data-testid="stCaptionContainer"] p {
     color: #647064 !important;
 }
 
-/* Statistics cards */
+/* ========================================
+   BIZUPON LOGO - NO CROPPING
+   ======================================== */
+
+[data-testid="stImage"] {
+    margin: 0 !important;
+    padding: 8px 0 12px 0 !important;
+    overflow: visible !important;
+}
+
+[data-testid="stImage"] img {
+    max-width: 300px !important;
+    width: 100% !important;
+    height: auto !important;
+    object-fit: contain !important;
+    object-position: center !important;
+    display: block !important;
+}
+
+/* Brand divider */
+.brand-line {
+    height: 4px;
+    background: linear-gradient(
+        90deg,
+        #23932c,
+        #8fda76,
+        #ffffff
+    );
+    border-radius: 4px;
+    margin: 20px 0 25px;
+}
+
+/* ========================================
+   STATISTICS CARDS
+   ======================================== */
+
 [data-testid="stMetric"] {
     background-color: #f0f8ee !important;
     border: 1px solid #d6e8d1 !important;
@@ -90,22 +119,24 @@ h1 {
     font-weight: 800 !important;
 }
 
-/* PDF uploader container */
+/* ========================================
+   PDF UPLOADER
+   ======================================== */
+
 [data-testid="stFileUploader"] {
-    background: #f8fcf7 !important;
+    background-color: #f8fcf7 !important;
     border: 1px solid #dcebd8 !important;
     border-radius: 12px !important;
     padding: 12px !important;
 }
 
-/* Upload drop area */
 [data-testid="stFileUploaderDropzone"] {
     background-color: #ffffff !important;
     border: 2px dashed #8acb82 !important;
     border-radius: 10px !important;
 }
 
-/* Upload text */
+/* Upload instructions */
 [data-testid="stFileUploaderDropzone"] p,
 [data-testid="stFileUploaderDropzone"] span,
 [data-testid="stFileUploaderDropzone"] small,
@@ -114,12 +145,12 @@ h1 {
     opacity: 1 !important;
 }
 
-/* Upload button - green background + white text */
+/* Green upload button */
 [data-testid="stFileUploaderDropzone"] button {
     background-color: #23932c !important;
     border: 1px solid #23932c !important;
-    color: #ffffff !important;
     border-radius: 8px !important;
+    color: #ffffff !important;
     opacity: 1 !important;
 }
 
@@ -135,7 +166,10 @@ h1 {
     border-color: #176d20 !important;
 }
 
-/* Download buttons */
+/* ========================================
+   DOWNLOAD BUTTONS
+   ======================================== */
+
 div.stDownloadButton > button {
     background-color: #23932c !important;
     border: 1px solid #23932c !important;
@@ -155,25 +189,29 @@ div.stDownloadButton > button:hover {
     border-color: #176d20 !important;
 }
 
-/* Dataframe */
+/* ========================================
+   TABLE, ALERTS AND EXPANDER
+   ======================================== */
+
 [data-testid="stDataFrame"] {
     border: 1px solid #e1e8e0;
     border-radius: 12px;
     overflow: hidden;
 }
 
-/* Alerts */
 [data-testid="stAlert"] {
     border-radius: 12px;
 }
 
-/* Expander */
 [data-testid="stExpander"] {
     border: 1px solid #dce8da !important;
     border-radius: 12px !important;
 }
 
-/* Footer */
+/* ========================================
+   FOOTER
+   ======================================== */
+
 .biz-footer {
     text-align: center;
     padding: 22px;
@@ -190,10 +228,10 @@ div.stDownloadButton > button:hover {
 </style>
 """, unsafe_allow_html=True)
 
+
 # ==========================================
-# BIZUPON BRAND HEADER
+# BIZUPON LOGO AND HEADER
 # ==========================================
-# No empty HTML wrapper - fixes blank box.
 
 st.image(LOGO_URL, width=300)
 
@@ -209,9 +247,11 @@ st.markdown(
     unsafe_allow_html=True
 )
 
+
 # ==========================================
 # PDF UPLOAD
 # ==========================================
+
 st.subheader("Upload Auction PDFs")
 
 files = st.file_uploader(
@@ -227,9 +267,11 @@ st.info(
     "Cancelled lots are excluded."
 )
 
+
 # ==========================================
 # PDF EXTRACTION
 # ==========================================
+
 if files:
 
     active = []
@@ -239,8 +281,11 @@ if files:
     with st.spinner(
         "Extracting lots and checking cancellations..."
     ):
+
         for f in files:
+
             try:
+
                 a, c, e = parse_pdf(
                     f.getvalue(),
                     f.name
@@ -251,6 +296,7 @@ if files:
                 issues.extend(e)
 
             except Exception as exc:
+
                 issues.append(
                     f"{f.name}: {exc}"
                 )
@@ -258,12 +304,16 @@ if files:
     # ======================================
     # STATISTICS
     # ======================================
+
     st.markdown("### Extraction Summary")
 
     c1, c2, c3, c4 = st.columns(4)
 
     with c1:
-        st.metric("Active Lots", len(active))
+        st.metric(
+            "Active Lots",
+            len(active)
+        )
 
     with c2:
         st.metric(
@@ -275,7 +325,7 @@ if files:
         st.metric(
             "WON Lots",
             sum(
-                r["Remark"] == "WON"
+                r.get("Remark") == "WON"
                 for r in active
             )
         )
@@ -287,19 +337,22 @@ if files:
         )
 
     # ======================================
-    # WARNINGS
+    # EXTRACTION WARNINGS
     # ======================================
+
     if issues:
+
         st.warning(
             "Some records may require manual review:"
         )
 
         for issue in issues:
-            st.write("• " + issue)
+            st.write("• " + str(issue))
 
     # ======================================
     # EXTRACTED RESULTS
     # ======================================
+
     if active:
 
         df = pd.DataFrame(active)[
@@ -310,6 +363,9 @@ if files:
                 "Remark"
             ]
         ]
+
+        # Preserve leading zeroes in lot numbers
+        df["Lot"] = df["Lot"].astype(str)
 
         st.markdown(
             "### Extracted Auction Bids"
@@ -327,13 +383,15 @@ if files:
         )
 
         # ==================================
-        # DOWNLOAD
+        # DOWNLOAD BUTTONS
         # ==================================
+
         st.markdown("### Download Results")
 
         d1, d2 = st.columns(2)
 
         with d1:
+
             st.download_button(
                 "⬇ Download Excel (.xlsx)",
                 data=excel_bytes(df),
@@ -346,6 +404,7 @@ if files:
             )
 
         with d2:
+
             st.download_button(
                 "⬇ Download CSV",
                 data=csv_bytes(df),
@@ -355,6 +414,7 @@ if files:
             )
 
     else:
+
         st.error(
             "No active records found. "
             "The PDF may be scanned or use "
@@ -364,26 +424,34 @@ if files:
     # ======================================
     # CANCELLED LOTS
     # ======================================
+
     with st.expander(
         f"View Cancelled Lots ({len(cancelled)})"
     ):
+
         if cancelled:
+
             st.dataframe(
                 pd.DataFrame(cancelled),
                 hide_index=True,
                 use_container_width=True
             )
+
         else:
+
             st.write("No cancelled lots found.")
 
 else:
+
     st.write(
         "Upload one or more PDF files to get started."
     )
 
+
 # ==========================================
 # FOOTER
 # ==========================================
+
 st.markdown("""
 <div class="biz-footer">
     <strong>BIZUPON</strong> | Auction PDF Extractor
