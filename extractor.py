@@ -39,7 +39,16 @@ def parse_pdf(content, filename='file.pdf'):
             # sort=False is essential: it preserves the logical order of Raku POS rows.
             lines = [normalize(s) for s in page.get_text('text', sort=False).splitlines()]
             lines = [s for s in lines if s]
-            starts = [i for i, s in enumerate(lines) if DATE.fullmatch(s)]
+            # A cancellation row contains a second date/time on its own line.
+            # Only treat a date as a vehicle start when an auction name and lot
+            # appear before the next date; otherwise it belongs to cancellation.
+            candidate_starts = [i for i, s in enumerate(lines) if DATE.fullmatch(s)]
+            starts = []
+            for idx, pos in enumerate(candidate_starts):
+                next_pos = candidate_starts[idx + 1] if idx + 1 < len(candidate_starts) else len(lines)
+                chunk = lines[pos:next_pos]
+                if any(LOT.fullmatch(s) for s in chunk) and any(AUCTION_KEYS.search(s) for s in chunk[1:7]):
+                    starts.append(pos)
             if not starts:
                 issues.append(f'{filename}: page {page_num} has no recognized vehicle records (scanned or different layout).')
                 continue
