@@ -1,12 +1,26 @@
-"""Parse copied TAA/CAA successful-bid tables (tab-separated or Markdown)."""
+"""Extract all lots from TAA/CAA Successful Bid website clipboard text.
+
+Supports native Ctrl+C tab/newline text and Markdown tables. No Streamlit dependency.
+Public API remains: HEADERS, clean, site_name, remark, parse_taa(text).
+"""
 import re
 import unicodedata
 from decimal import Decimal
 
 HEADERS = ['Auction', 'Lot', 'Bid Price (Man Yen)', 'Remark']
-SITE_LOT = re.compile(r'\b((?:TAA|CAA)[A-Z0-9 _-]*?)\s*(?:<br\s*/?>|\n|\s+)\s*(\d{4,6})\b', re.I)
-AMOUNT = re.compile(r'^\s*([\d,]+)(?:\.\d+)?\s*(?:[+＋]\s*\d+)?\s*$', re.I)
-STATUS = re.compile(r'Your\s+success|Another\s+success|UNSOLD|Cancelled|Canceled|Pending|Success', re.I)
+
+# The copied site/lot cell contains a line break between auction and lot.
+# Restrict the auction token so that we do not swallow other table columns.
+SITE_LOT = re.compile(
+    r'(?<![A-Z0-9])((?:TAA|CAA)[A-Z0-9_-]{0,35})[ \t]*\n[ \t]*(\d{4,6})(?!\d)',
+    re.IGNORECASE,
+)
+BID = re.compile(r'\bDirect\s*(?:\|\s*)?([\d,]+(?:\.\d+)?)\b', re.IGNORECASE)
+STATUS = re.compile(
+    r'Your\s+success|Another\s+success|UNSOLD|Cancelled|Canceled|Pending|Success',
+    re.IGNORECASE,
+)
+
 
 def clean(value):
     value = re.sub(r'\[([^\]]+)\]\([^)]*\)', r'\1', str(value))
@@ -14,63 +28,67 @@ def clean(value):
     value = re.sub(r'<[^>]*>', ' ', value)
     return unicodedata.normalize('NFKC', value).strip()
 
+
 def site_name(raw):
     name = re.sub(r'[^A-Z0-9]', '', raw.upper())
     prefix = 'TAA' if name.startswith('TAA') else 'CAA'
     region = name[len(prefix):]
     return prefix + (' ' + region.title() if region else '')
 
+
 def remark(raw):
     s = clean(raw).lower()
-    if 'your success' in s: return 'WON'
-    if 'another success' in s: return 'LOST'
-    if 'unsold' in s: return 'UNSOLD'
-    if 'cancel' in s: return 'CANCELLED'
-    if 'pending' in s: return 'PENDING'
-    return 'UNKNOWN'
+    if 'your success' in s:
+        return 'WON'
+    if 'another success' in s:
+        return 'LOST'
+    if 'unsold' in s:
+        return 'UNSOLD'
+    if 'cancel' in s:
+        return 'CANCELLED'
+    if 'pending' in s:
+        return 'PENDING'
+    # Preserve unfamiliar statuses instead of silently discarding a lot.
+    return clean(raw).split('\n')[0].strip() or 'UNKNOWN'
+
 
 def parse_taa(text):
-    """Return (records, issues). Never silently discard a recognized lot."""
+    """Return (records, issues) for all recognized lots in pasted order.
+
+    Bid Price is the number after 'Direct' (thousands of yen), not the
+    auction result amount after 'Your success' / 'Another success'.
+    """
     records, issues = [], []
-    if not text.strip(): return records, issues
-    for line_no, raw in enumerate(text.splitlines(), 1):
-        if not raw.strip(): continue
-        if raw.lstrip().startswith('|'):
-            cells = [clean(x) for x in raw.strip().strip('|').split('|')]
-        elif '\t' in raw:
-            cells = [clean(x) for x in raw.split('\t')]
+    if not text or not text.strip():
+        return records, issues
+
+    normalized = clean(text).replace('\r\n', '\n').replace('\r', '\n')
+    # Markdown table cells use pipes, but copied HTML cells contain tabs.
+    # Neither is needed to locate the site+lot / Direct+bid markers.
+    matches = list(SITE_LOT.finditer(normalized))
+    if not matches:
+        return [], ['No auction rows recognized. Copy the website table (Ctrl+C, Ctrl+V).']
+
+    for i, match in enumerate(matches):
+        auction = site_name(match.group(1))
+        lot = match.group(2)
+        segment = normalized[match.end():matches[i + 1].start() if i + 1 < len(matches) else len(normalized)]
+        bid_match = BID.search(segment)
+        if not bid_match:
+            issues.append(f'{auction} {lot}: bid price after Direct not found')
+            continue
+        amount = Decimal(bid_match.group(1).replace(',', ''))
+        # Only inspect status after the bid; the earlier fields can contain arbitrary text.
+        status_match = STATUS.search(segment, bid_match.end())
+        if status_match:
+            status = remark(status_match.group())
         else:
-            continue
-        found = None
-        for idx, cell in enumerate(cells):
-            match = SITE_LOT.search(cell)
-            if match:
-                found = (idx, match)
-                break
-        if not found: continue
-        idx, match = found
-        auction, lot = site_name(match.group(1)), match.group(2)
-        # Website has one site/lot column, then year, model, grade, start price,
-        # method, bid price, status. The copied markdown sample includes a blank
-        # leading column; using offsets relative to site/lot avoids that issue.
-        # Bid price is 6 columns after site/lot (site,year,model,grade,start,method,bid).
-        bid_idx = idx + 6
-        status_idx = idx + 7
-        if bid_idx >= len(cells):
-            issues.append(f'Line {line_no}: {auction} {lot} - bid price column missing')
-            continue
-        bid_cell = cells[bid_idx].split('\n')[0].strip()
-        price_match = AMOUNT.match(bid_cell)
-        if not price_match:
-            issues.append(f'Line {line_no}: {auction} {lot} - cannot read bid price: {bid_cell!r}')
-            continue
-        amount_thousand = Decimal(price_match.group(1).replace(',', ''))
-        status_cell = cells[status_idx] if status_idx < len(cells) else ''
+            status = 'UNKNOWN'
+            issues.append(f'{auction} {lot}: status not recognized; lot included as UNKNOWN')
         records.append({
-            'Auction': auction, 'Lot': lot,
-            'Bid Price (Man Yen)': float(amount_thousand / Decimal(10)),
-            'Remark': remark(status_cell)
+            'Auction': auction,
+            'Lot': lot,
+            'Bid Price (Man Yen)': float(amount / Decimal('10')),
+            'Remark': status,
         })
-    if not records and not issues:
-        issues.append('No auction rows recognized. Copy the website table into the paste box (Ctrl+C, Ctrl+V).')
     return records, issues
