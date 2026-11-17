@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 from extractor import parse_pdf, excel_bytes, csv_bytes
 from taa_extractor import parse_taa
+from mirive_extractor import combine_mirive_snapshots
 
 st.set_page_config(page_title='BIZUPON | Auction Extractor', page_icon='🚘', layout='wide')
 st.markdown('''<style>
@@ -17,7 +18,7 @@ st.image('https://www.bizupon.com/images/logo.png', width=300)
 st.title('🚘 Auction Data Extractor')
 st.caption('BIZUPON | Japanese auction PDFs and TAA/CAA copied bid tables')
 
-pdf_tab, taa_tab = st.tabs(['📄 Raku POS PDF Extractor', '📋 TAA / CAA Paste Extractor'])
+pdf_tab, taa_tab, mirive_tab = st.tabs(['📄 Raku POS PDF Extractor', '📋 TAA / CAA Paste Extractor', '🚗 MIRIVE PDF Extractor'])
 
 with pdf_tab:
     files = st.file_uploader('Upload auction PDFs', type=['pdf'], accept_multiple_files=True)
@@ -71,3 +72,35 @@ with taa_tab:
             b.download_button('⬇ Download selected CSV',csv_bytes(df),f'{safe_name}_bids.csv',mime='text/csv',use_container_width=True)
         else: st.warning('No auction lots found. Check copied table format.')
     else: st.info('Paste the website table to begin. All statuses, including UNSOLD, are included.')
+
+
+with mirive_tab:
+    st.subheader('MIRIVE PDF Extractor')
+    st.caption('Upload one or more MIRIVE member-site PDFs. For matching lots, the latest PDF snapshot takes priority. Blank own bids are skipped even if an earlier PDF had a bid.')
+    mirive_files = st.file_uploader('Upload MIRIVE PDFs', type=['pdf'], accept_multiple_files=True, key='mirive_files')
+    if mirive_files:
+        with st.spinner('Comparing MIRIVE PDF snapshots...'):
+            mirive_rows, mirive_skipped, mirive_issues = combine_mirive_snapshots(
+                [(f.name, f.getvalue()) for f in mirive_files]
+            )
+        a,b,c,d=st.columns(4)
+        a.metric('Active lots',len(mirive_rows))
+        b.metric('Blank bid skipped',len(mirive_skipped))
+        c.metric('WON',sum(r['Remark']=='WON' for r in mirive_rows))
+        d.metric('PDFs uploaded',len(mirive_files))
+        if mirive_issues:
+            with st.expander(f'Extraction warnings ({len(mirive_issues)})'):
+                for issue in mirive_issues[:150]: st.write('• '+issue)
+        if mirive_rows:
+            mirive_df = pd.DataFrame(mirive_rows)[['Auction','Lot','Bid Price (Man Yen)','Remark']]
+            st.dataframe(mirive_df,hide_index=True,use_container_width=True,column_config={'Lot':st.column_config.TextColumn('Lot')})
+            left,right=st.columns(2)
+            left.download_button('⬇ Download MIRIVE Excel',excel_bytes(mirive_df),'mirive_active_bids.xlsx',mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',use_container_width=True)
+            right.download_button('⬇ Download MIRIVE CSV',csv_bytes(mirive_df),'mirive_active_bids.csv',mime='text/csv',use_container_width=True)
+        else:
+            st.warning('No valid MIRIVE own bids found in the uploaded PDF(s).')
+        with st.expander(f'Blank-price lots skipped ({len(mirive_skipped)})'):
+            if mirive_skipped:
+                st.dataframe(pd.DataFrame(mirive_skipped)[['Auction','Lot','Reason','Source File']],hide_index=True,use_container_width=True)
+    else:
+        st.info('Upload MIRIVE PDFs to extract your own bids. Final selling prices are never substituted for missing bids.')
