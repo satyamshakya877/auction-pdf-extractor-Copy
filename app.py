@@ -1,8 +1,10 @@
 import streamlit as st
 import pandas as pd
+import re
 from extractor import parse_pdf, excel_bytes, csv_bytes
 from taa_extractor import parse_taa
 from mirive_extractor import combine_mirive_snapshots
+from aucneo_won_extractor import parse_won_pdf
 
 st.set_page_config(page_title='BIZUPON | Auction Extractor', page_icon='🚘', layout='wide')
 st.markdown('''<style>
@@ -16,9 +18,14 @@ div.stDownloadButton button * {color:white!important}
 </style>''', unsafe_allow_html=True)
 st.image('https://www.bizupon.com/images/logo.png', width=300)
 st.title('🚘 Auction Data Extractor')
-st.caption('BIZUPON | Japanese auction PDFs and TAA/CAA copied bid tables')
+st.caption('BIZUPON | Auction PDF bids, won vehicles and TAA/CAA copied tables')
 
-pdf_tab, taa_tab, mirive_tab = st.tabs(['📄 Raku POS PDF Extractor', '📋 TAA / CAA Paste Extractor', '🚗 MIRIVE PDF Extractor'])
+pdf_tab, taa_tab, mirive_tab, won_tab = st.tabs([
+    '📄 Raku POS PDF Extractor',
+    '📋 TAA / CAA Paste Extractor',
+    '🚗 MIRIVE PDF Extractor',
+    '🏆 AUCNEO WON Extractor',
+])
 
 with pdf_tab:
     files = st.file_uploader('Upload auction PDFs', type=['pdf'], accept_multiple_files=True)
@@ -104,3 +111,83 @@ with mirive_tab:
                 st.dataframe(pd.DataFrame(mirive_skipped)[['Auction','Lot','Reason','Source File']],hide_index=True,use_container_width=True)
     else:
         st.info('Upload MIRIVE PDFs to extract your own bids. Final selling prices are never substituted for missing bids.')
+
+
+with won_tab:
+    st.subheader('AUCNEO Won Vehicles Extractor')
+    st.caption(
+        'Upload the AUCNEO 落札車一覧 (Won Vehicles List) PDF. '
+        'WIN PRICE comes from 価格(万) and is in Man Yen (10,000 JPY).'
+    )
+    won_files = st.file_uploader(
+        'Upload AUCNEO WON PDF(s)', type=['pdf'],
+        accept_multiple_files=True, key='aucneo_won_files',
+    )
+    if won_files:
+        won_rows, won_issues = [], []
+        with st.spinner('Extracting winning prices and auction names...'):
+            for file in won_files:
+                try:
+                    rows, issues = parse_won_pdf(file.getvalue(), file.name)
+                    won_rows.extend(rows)
+                    won_issues.extend(issues)
+                except Exception as exc:
+                    won_issues.append(f'{file.name}: {exc}')
+
+        if won_issues:
+            with st.expander(f'Records to review ({len(won_issues)})', expanded=True):
+                for issue in won_issues[:200]:
+                    st.write('• ' + issue)
+
+        if won_rows:
+            full_df = pd.DataFrame(won_rows)
+            auction_options = sorted(full_df['Auction'].unique().tolist())
+            selected_auction = st.selectbox(
+                'Select auction', ['All Auctions'] + auction_options,
+                key='aucneo_won_auction',
+            )
+            selected_df = (full_df if selected_auction == 'All Auctions'
+                           else full_df.loc[full_df['Auction'] == selected_auction])
+            output_df = selected_df[
+                ['Auction', 'Lot', 'Win Price (Man Yen)']
+            ].copy()
+            output_df['Lot'] = output_df['Lot'].astype(str)
+
+            total_col, groups_col, selected_col = st.columns(3)
+            total_col.metric('Total won lots', len(full_df))
+            groups_col.metric('Auction groups', len(auction_options))
+            selected_col.metric('Selected auction lots', len(output_df))
+
+            st.dataframe(
+                output_df, hide_index=True, use_container_width=True,
+                column_config={
+                    'Lot': st.column_config.TextColumn('Lot'),
+                    'Win Price (Man Yen)': st.column_config.NumberColumn(
+                        'Win Price (Man Yen)', format='%.1f'
+                    ),
+                },
+            )
+            safe_name = ('all_auctions' if selected_auction == 'All Auctions'
+                         else re.sub(r'[^a-z0-9_-]+', '_', selected_auction.lower()).strip('_'))
+            excel_col, csv_col = st.columns(2)
+            excel_col.download_button(
+                '⬇ Download selected Excel', excel_bytes(output_df),
+                f'{safe_name}_won.xlsx',
+                mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                use_container_width=True, key='aucneo_won_excel',
+            )
+            csv_col.download_button(
+                '⬇ Download selected CSV', csv_bytes(output_df),
+                f'{safe_name}_won.csv', mime='text/csv',
+                use_container_width=True, key='aucneo_won_csv',
+            )
+            with st.expander('View auction dates (for repeated lots across 3 months)'):
+                st.dataframe(
+                    selected_df[['Auction Date', 'Auction', 'Lot',
+                                 'Win Price (Man Yen)', 'Page']],
+                    hide_index=True, use_container_width=True,
+                )
+        else:
+            st.warning('No winning vehicle records found. Please upload an AUCNEO 落札車一覧 report.')
+    else:
+        st.info('Upload WON.pdf to extract all auction wins and select one auction or All Auctions.')
