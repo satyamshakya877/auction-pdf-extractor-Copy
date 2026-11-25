@@ -20,11 +20,12 @@ st.image('https://www.bizupon.com/images/logo.png', width=300)
 st.title('🚘 Auction Data Extractor')
 st.caption('BIZUPON | Auction PDF bids, won vehicles and TAA/CAA copied tables')
 
-pdf_tab, taa_tab, mirive_tab, won_tab = st.tabs([
+pdf_tab, taa_tab, mirive_tab, won_tab, recheck_tab = st.tabs([
     '📄 Raku POS PDF Extractor',
     '📋 TAA / CAA Paste Extractor',
     '🚗 MIRIVE PDF Extractor',
     '🏆 AUCNEO WON Extractor',
+    '✅ BIZUPON WIN RECHECK',
 ])
 
 with pdf_tab:
@@ -191,3 +192,8 @@ with won_tab:
             st.warning('No winning vehicle records found. Please upload an AUCNEO 落札車一覧 report.')
     else:
         st.info('Upload WON.pdf to extract all auction wins and select one auction or All Auctions.')
+
+
+with recheck_tab:
+    from win_recheck import render_win_recheck
+    render_win_recheck()
