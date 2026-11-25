@@ -115,6 +115,33 @@ def table_rows(f,source,defaults,divisor):
         selected.append(st.selectbox(f'{source}: {label}',cols,index=min(index,len(cols)-1),key=f'{source}-{label}-{f.name}'))
     return [record(r[selected[0]],r[selected[1]],price(r[selected[2]],divisor),source) for _,r in df.iterrows() if str(r[selected[0]]).strip() and str(r[selected[1]]).strip()]
 
+def uss_rows(data):
+    for encoding in ('utf-8-sig', 'cp932', 'cp1252'):
+        try:
+            df=pd.read_csv(io.BytesIO(data),encoding=encoding,dtype=str,keep_default_na=False)
+            break
+        except UnicodeDecodeError:
+            continue
+    else:
+        raise ValueError('USS CSV encoding not recognized')
+    required={'Date','Bid No.','Site','Result','Final Price'}
+    if not required.issubset(df.columns):
+        raise ValueError('USS CSV missing columns: '+', '.join(sorted(required-set(df.columns))))
+    short={auction_key(n[4:]):n for n in MASTER_AUCTIONS if n.startswith('USS ')}
+    rows=[]; warnings=[]
+    for _,r in df.iterrows():
+        if base(r['Result']) not in ('SOLD','NEGOTIATE SOLD'): continue
+        a=short.get(auction_key(r['Site']),auction(r['Site']))
+        p=price(r['Final Price'],10)
+        if not known_auction(a): warnings.append(f"USS: unknown site {r['Site']}")
+        if p is None: warnings.append(f"USS {a} {r['Bid No.']}: final price missing")
+        d=pd.to_datetime(r['Date'],format='%b %d.%y',errors='coerce')
+        if pd.isna(d):
+            warnings.append(f"USS {a} {r['Bid No.']}: invalid date {r['Date']}")
+            continue
+        rows.append(record(a,r['Bid No.'],p,'USS',d.strftime('%Y-%m-%d')))
+    return rows,warnings
+
 @st.cache_data(show_spinner=False)
 def cached_pdf_rows(data):
     return pdf_rows(data)
@@ -123,13 +150,15 @@ def render_win_recheck():
     st.markdown('### BIZUPON WIN RECHECK')
     st.caption('Upload or paste your data → select auction date → review differences.')
     with st.expander('1. Upload / paste winning data', expanded=True):
-        a,b,c=st.columns(3)
+        a,b,c,d=st.columns(4)
         with a:
             jpfile=st.file_uploader('BIZUPON WIN',type=['xlsx','xls','csv'],key='wr_jp')
         with b:
             files=st.file_uploader('AUCNEO WON',type=['pdf','xlsx','xls','csv'],accept_multiple_files=True,key='wr_auc')
         with c:
             pasted=st.text_area('TAA / CAA WIN — paste table',height=100,key='wr_taa')
+        with d:
+            ussfiles=st.file_uploader("USS WIN CSV",type=["csv"],accept_multiple_files=True,key="wr_uss")
         try:
             jp=table_rows(jpfile,'BIZUPON',(3,4,15),10000) if jpfile else []
             ext=[]; warnings=[]; pending=False
@@ -141,6 +170,20 @@ def render_win_recheck():
                     ext.extend(x for x in r if x['Date']==chosen); warnings.extend(w)
                 else: ext.extend(table_rows(f,'AUCNEO',(0,1,2),1))
             r,w=taa_rows(pasted); ext.extend(r); warnings.extend(w)
+            ur=[]
+            for f in ussfiles:
+                r,w=uss_rows(f.getvalue()); ur.extend(r); warnings.extend(w)
+            if ur:
+                dates=sorted({r['Date'] for r in ur})
+                chosen=st.selectbox('USS auction date',dates,index=0 if len(dates)==1 else None,key='wr_uss_date')
+                if chosen is None: pending=True
+                else:
+                    pdf_dates={r['Date'] for r in ext if r['Source']=='AUCNEO' and r['Date']}
+                    if pdf_dates and pdf_dates!={f'{int(chosen[5:7])}/{int(chosen[8:10])}'}:
+                        # Compare numeric month/day to allow leading zeros in PDF.
+                        if {tuple(map(int,x.split('/'))) for x in pdf_dates}!={(int(chosen[5:7]),int(chosen[8:10]))}:
+                            st.error('USS and AUCNEO PDF auction dates differ. Select matching dates.'); return
+                    ext.extend(r for r in ur if r['Date']==chosen)
             st.caption(f'BIZUPON: {len(jp)} rows | Auction: {len(ext)} rows')
         except Exception as e:
             st.error(f'Input could not be processed: {e}'); return
@@ -148,7 +191,7 @@ def render_win_recheck():
         with st.expander(f'Extraction warnings ({len(warnings)})'):
             for w in warnings: st.warning(w)
     if pending:
-        st.info('Select the auction date for every PDF before reviewing.'); return
+        st.info('Select the auction date for each dated source before reviewing.'); return
     if not jp or not ext:
         st.info('Add BIZUPON WIN and at least one auction source to start.'); return
     df,conflicts=compare(jp,ext,Decimal('0'))
