@@ -67,7 +67,7 @@ def taa_rows(text):
     matches=list(re.finditer(pattern,text,re.I)); rows=[]; warnings=[]
     for i,m in enumerate(matches):
         block=text[m.end():matches[i+1].start() if i+1<len(matches) else len(text)]
-        p=re.search(r'\bsuccess\s*[|\t\n ]+\s*([\d,]+(?:\.\d+)?)',block,re.I)
+        p=re.search(r'\bsuccess(?:\s+for\s+REAL)?\s*[|\t\n ]+\s*([\d,]+(?:\.\d+)?)',block,re.I)
         if p: rows.append(record(m[1],m[2],price(p[1],10),'TAA/CAA'))
         else: warnings.append(f'{m[1]} {m[2]}: success price not found')
     return rows,warnings
