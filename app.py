@@ -20,12 +20,13 @@ st.image('https://www.bizupon.com/images/logo.png', width=300)
 st.title('🚘 Auction Data Extractor')
 st.caption('BIZUPON | Auction PDF bids, won vehicles and TAA/CAA copied tables')
 
-pdf_tab, taa_tab, mirive_tab, won_tab, recheck_tab = st.tabs([
+pdf_tab, taa_tab, mirive_tab, won_tab, recheck_tab, combined_tab = st.tabs([
     '📄 Raku POS PDF Extractor',
     '📋 TAA / CAA Paste Extractor',
     '🚗 MIRIVE PDF Extractor',
     '🏆 AUCNEO WON Extractor',
     '✅ BIZUPON WIN RECHECK',
+    '📊 COMBINED BID EXTRACTOR',
 ])
 
 with pdf_tab:
@@ -63,6 +64,7 @@ with taa_tab:
     pasted = st.text_area('Copied auction table',height=220,placeholder='Paste TAAKINKI / TAASHIKOKU / CAATOKYO ... rows here')
     if pasted.strip():
         rows, issues = parse_taa(pasted)
+        combined_taa_rows = rows
         if issues:
             with st.expander(f'Rows needing review ({len(issues)})',expanded=True):
                 for issue in issues[:100]: st.write('• '+issue)
@@ -197,3 +199,8 @@ with won_tab:
 with recheck_tab:
     from win_recheck import render_win_recheck
     render_win_recheck()
+
+
+with combined_tab:
+    from combined_bids import render_combined
+    render_combined(active if files else [], combined_taa_rows if pasted.strip() else [], mirive_rows if mirive_files else [])
