@@ -10,7 +10,7 @@ import pandas as pd
 DATE = re.compile(r'^\d{1,2}/\d{1,2}\s+\d{1,2}:\d{2}$')
 LOT = re.compile(r'^(\d{1,6})\s*\[([A-Z])\]$', re.I)
 PRICE = re.compile(r'らく\s*POS\s*申込価格\s*[:：]\s*([\d,.]+)\s*万円', re.I)
-CANCEL = re.compile(r'らく\s*POS\s*(?:取消|キャンセル)|取消車両|出品取消|入札取消', re.I)
+CANCEL = re.compile(r'らく\s*POS\s*(?:取消|キャンセル)|取消車両|出品取消|入札取消|訂正\s*による\s*取消', re.I)
 WON = re.compile(r'自社落札')
 LOST = re.compile(r'他社落札')
 UNSOLD = re.compile(r'流れ|流札')
