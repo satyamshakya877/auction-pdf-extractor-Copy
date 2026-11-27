@@ -128,6 +128,9 @@ def uss_rows(data):
     if not required.issubset(df.columns):
         raise ValueError('USS CSV missing columns: '+', '.join(sorted(required-set(df.columns))))
     short={auction_key(n[4:]):n for n in MASTER_AUCTIONS if n.startswith('USS ')}
+    # Combined USS site label is Nagoya in BIZUPON's auction master.
+    short[auction_key('Nagoya&Hokuriku')] = 'USS Nagoya'
+    short[auction_key('USS Nagoya&Hokuriku')] = 'USS Nagoya'
     rows=[]; warnings=[]
     for _,r in df.iterrows():
         if base(r['Result']) not in ('SOLD','NEGOTIATE SOLD'): continue
