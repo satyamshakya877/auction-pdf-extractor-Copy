@@ -15,7 +15,7 @@ WON = re.compile(r'自社落札')
 LOST = re.compile(r'他社落札')
 UNSOLD = re.compile(r'流れ|流札')
 PENDING = re.compile(r'未セリ')
-AUCTION_KEYS = re.compile(r'KCAA|TAA|CAA|USS|MIRIVE|JU|HAA|ARAI|AUCNET|オークネット|NAA|LAA|JAA|HONDA|ホンダ|ホンタ゛|ホンタ|ホンダ|KAA', re.I)
+AUCTION_KEYS = re.compile(r'KCAA|TAA|CAA|USS|MIRIVE|JU|HAA|ARAI|アライ|AUCNET|オークネット|NAA|LAA|JAA|HONDA|ホンダ|ホンタ゛|ホンタ|ホンダ|KAA', re.I)
 NAMES = {'福岡': 'Fukuoka', '大阪': 'Osaka', '東京': 'Tokyo', '北海道': 'Hokkaido', '名古屋': 'Nagoya', '中部': 'Chubu', '九州': 'Kyushu', '神戸': 'Kobe', '札幌': 'Sapporo', '広島': 'Hiroshima', '四国': 'Shikoku', '関東': 'Kanto', '東北': 'Tohoku'}
 
 
@@ -26,6 +26,8 @@ def normalize(value):
 def auction_english(raw):
     name = normalize(raw)
     # AUCNET appears as オークネット in Japanese Raku POS PDFs.
+    if re.fullmatch(r'アライ\s*4\s*輪\s*ベイサイド', name):
+        return 'ARAI Bayside'
     if name == 'オークネット':
         return 'AUCNET'
     # NFKC converts half-width ﾎﾝﾀﾞ to ホンダ.
