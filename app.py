@@ -22,7 +22,7 @@ st.caption('BIZUPON | Auction PDF bids, won vehicles and TAA/CAA copied tables')
 
 pdf_tab, taa_tab, mirive_tab, won_tab, recheck_tab, combined_tab = st.tabs([
     '📄 Raku POS PDF Extractor',
-    '📋 TAA / CAA Paste Extractor',
+    '📋 TAA / CAA / ARAI Paste Extractor',
     '🚗 MIRIVE PDF Extractor',
     '🏆 AUCNEO WON Extractor',
     '✅ BIZUPON WIN RECHECK',
@@ -59,9 +59,9 @@ with pdf_tab:
             if cancelled: st.dataframe(pd.DataFrame(cancelled),hide_index=True,use_container_width=True)
 
 with taa_tab:
-    st.subheader('Paste complete TAA / CAA table')
-    st.caption('On the TAA/CAA website, select the entire table, Ctrl+C, then paste here with Ctrl+V. No Excel Special Paste needed.')
-    pasted = st.text_area('Copied auction table',height=220,placeholder='Paste TAAKINKI / TAASHIKOKU / CAATOKYO ... rows here')
+    st.subheader('Paste complete TAA / CAA / ARAI table')
+    st.caption('On the TAA/CAA or ARAI website, select the entire table, Ctrl+C, then paste here with Ctrl+V. No Excel Special Paste needed.')
+    pasted = st.text_area('Copied auction table',height=220,placeholder='Paste TAA / CAA / ARAI website rows here')
     if pasted.strip():
         rows, issues = parse_taa(pasted)
         combined_taa_rows = rows

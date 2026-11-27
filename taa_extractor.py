@@ -92,3 +92,29 @@ def parse_taa(text):
             'Remark': status,
         })
     return records, issues
+
+# Keep the existing TAA/CAA parser intact; route ARAI clipboard rows separately.
+_parse_original_taa = parse_taa
+ARAI_ROW = re.compile(r'(?im)\b(4W[ \t]+BAYSIDE)\s*\n[ \t]*No\.[ \t]*(\d{1,6})\b')
+ARAI_BID = re.compile(r'(?:\\|¥)\s*([\d,]+)\s*\n[ \t]*バイヤー席')
+
+def parse_taa(text):
+    normalized = clean(text or '').replace('\r\n','\n').replace('\r','\n')
+    arai = list(ARAI_ROW.finditer(normalized))
+    if not arai:
+        return _parse_original_taa(text)
+    markers = sorted([(m.start(), 'arai', m) for m in arai] + [(m.start(), 'taa', m) for m in SITE_LOT.finditer(normalized)])
+    rows, issues = [], []
+    for i, (start, kind, m) in enumerate(markers):
+        end = markers[i+1][0] if i+1 < len(markers) else len(normalized)
+        segment = normalized[start:end]
+        if kind == 'taa':
+            r, e = _parse_original_taa(segment); rows.extend(r); issues.extend(e); continue
+        lot = m.group(2)
+        bid = ARAI_BID.search(segment)
+        if not bid:
+            issues.append(f'ARAI Bayside {lot}: buyer bid price not found'); continue
+        if re.search(r'取消|\bCancel(?:led|ed)?\b', segment, re.I):
+            continue
+        rows.append({'Auction':'ARAI Bayside','Lot':lot,'Bid Price (Man Yen)':float(Decimal(bid.group(1).replace(',',''))/Decimal(10000)), 'Remark':''})
+    return rows, issues
